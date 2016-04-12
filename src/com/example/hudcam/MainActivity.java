@@ -35,7 +35,6 @@ public class MainActivity extends Activity{
         setContentView(R.layout.activity_main);
         fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
 
-
         mCamera = getCameraInstance();
 
         // 创建预览类，并与Camera关联，最后添加到界面布局中
@@ -130,12 +129,12 @@ public class MainActivity extends Activity{
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
             // 获取Jpeg图片，并保存在sd卡上
-            File pictureFile = new File("/sdcard/" + System.currentTimeMillis()
-                    + ".jpg");
+            File pictureFile = new File(fileUri.getPath());
             try {
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 fos.write(data);
                 fos.close();
+
             } catch (Exception e) {
                 Log.d(TAG, "保存图片失败");
             }
