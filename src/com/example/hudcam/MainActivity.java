@@ -3,6 +3,11 @@ package com.example.hudcam;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
@@ -15,6 +20,7 @@ import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -130,16 +136,29 @@ public class MainActivity extends Activity{
         public void onPictureTaken(byte[] data, Camera camera) {
             // 获取Jpeg图片，并保存在sd卡上
             File pictureFile = new File(fileUri.getPath());
+            File overlayFile = new File("");
+            InputStream inputStream = getResources().openRawResource(+R.drawable.darth_vader);
+            Bitmap rawBitmap = BitmapFactory.decodeByteArray(data,0,data.length);
+            Bitmap overlayBitmap = BitmapFactory.decodeStream(inputStream);
             try {
                 FileOutputStream fos = new FileOutputStream(pictureFile);
-                fos.write(data);
+                Bitmap mixBitmap = overlay(rawBitmap,overlayBitmap);
+                mixBitmap.compress(Bitmap.CompressFormat.PNG,100,fos);
+//                fos.write(data);
                 fos.close();
-
             } catch (Exception e) {
                 Log.d(TAG, "保存图片失败");
             }
         }
     };
+
+    public static Bitmap overlay(Bitmap bmp1, Bitmap bmp2) {
+        Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
+        Canvas canvas = new Canvas(bmOverlay);
+        canvas.drawBitmap(bmp1, new Matrix(), null);
+        canvas.drawBitmap(bmp2, 0, 0, null);
+        return bmOverlay;
+    }
 
     @Override
     protected void onDestroy() {
