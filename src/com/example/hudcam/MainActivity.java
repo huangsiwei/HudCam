@@ -18,11 +18,10 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by huangsiwei on 16/4/12.
@@ -45,6 +44,11 @@ public class MainActivity extends Activity{
 
         // 创建预览类，并与Camera关联，最后添加到界面布局中
         mPreview = new CameraPreview(this, mCamera);
+        Camera.Parameters mCameraParameters = mCamera.getParameters();
+        mCameraParameters.getPictureSize();
+        List<Camera.Size> supportedPictureSizes = mCameraParameters.getSupportedPictureSizes();
+        mCameraParameters.setPictureSize(supportedPictureSizes.get(0).width,supportedPictureSizes.get(0).height);
+        mCamera.setParameters(mCameraParameters);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
         ImageView darth_vader = (ImageView) findViewById(R.id.darth_vader);
@@ -123,6 +127,10 @@ public class MainActivity extends Activity{
         Camera c = null;
         try {
             c = Camera.open();
+            Camera.Parameters cParameters = c.getParameters();
+            cParameters.set("jpeg-quality", 100);
+//            cParameters.setPreviewSize(3120,4160);
+//            cParameters.setPictureSize(3120,4160);
             c.setDisplayOrientation(90);
         } catch (Exception e) {
             Log.d(TAG, "打开Camera失败失败");
@@ -144,7 +152,7 @@ public class MainActivity extends Activity{
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 Bitmap mixBitmap = overlay(rawBitmap,overlayBitmap);
                 mixBitmap.compress(Bitmap.CompressFormat.PNG,100,fos);
-//                fos.write(data);
+                fos.write(data);
                 fos.close();
             } catch (Exception e) {
                 Log.d(TAG, "保存图片失败");
