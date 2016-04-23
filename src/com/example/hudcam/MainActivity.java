@@ -44,11 +44,13 @@ public class MainActivity extends Activity{
 
         // 创建预览类，并与Camera关联，最后添加到界面布局中
         mPreview = new CameraPreview(this, mCamera);
+
         Camera.Parameters mCameraParameters = mCamera.getParameters();
         mCameraParameters.getPictureSize();
         List<Camera.Size> supportedPictureSizes = mCameraParameters.getSupportedPictureSizes();
         mCameraParameters.setPictureSize(supportedPictureSizes.get(0).width,supportedPictureSizes.get(0).height);
         mCamera.setParameters(mCameraParameters);
+
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
         ImageView darth_vader = (ImageView) findViewById(R.id.darth_vader);
@@ -127,10 +129,6 @@ public class MainActivity extends Activity{
         Camera c = null;
         try {
             c = Camera.open();
-            Camera.Parameters cParameters = c.getParameters();
-            cParameters.set("jpeg-quality", 100);
-//            cParameters.setPreviewSize(3120,4160);
-//            cParameters.setPictureSize(3120,4160);
             c.setDisplayOrientation(90);
         } catch (Exception e) {
             Log.d(TAG, "打开Camera失败失败");
@@ -164,8 +162,22 @@ public class MainActivity extends Activity{
         Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
         Canvas canvas = new Canvas(bmOverlay);
         canvas.drawBitmap(bmp1, new Matrix(), null);
-        canvas.drawBitmap(bmp2, 0, 0, null);
+        canvas.drawBitmap(scaleBitMap(bmp2,1000,1000), (bmp1.getWidth()/2 - 500), (bmp1.getHeight()/2 - 500), null);
         return bmOverlay;
+    }
+
+    private static Bitmap scaleBitMap(Bitmap rawBitMap,int scaledWidth,int scaledHeight) {
+        int width = rawBitMap.getWidth();
+        int height = rawBitMap.getHeight();
+
+        float scaleWidthRate = ((float) scaledWidth) / width;
+        float scaleHeightRate = ((float) scaledHeight) / height;
+        // 取得想要缩放的matrix参数
+        Matrix matrix = new Matrix();
+        matrix.postScale(scaleWidthRate, scaleHeightRate);
+        // 得到新的图片
+        return Bitmap.createBitmap(rawBitMap, 0, 0, width, height, matrix,
+                true);
     }
 
     @Override
