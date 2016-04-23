@@ -149,7 +149,7 @@ public class MainActivity extends Activity{
             try {
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 Bitmap mixBitmap = overlay(rawBitmap,overlayBitmap);
-                mixBitmap.compress(Bitmap.CompressFormat.PNG,100,fos);
+                mixBitmap.compress(Bitmap.CompressFormat.JPEG,100,fos);
                 fos.write(data);
                 fos.close();
             } catch (Exception e) {
