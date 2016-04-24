@@ -2,7 +2,9 @@ package com.example.hudcam;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -14,9 +16,12 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -37,6 +42,9 @@ public class MainActivity extends Activity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN , WindowManager.LayoutParams. FLAG_FULLSCREEN);
+        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
         setContentView(R.layout.activity_main);
         fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
 
@@ -72,6 +80,18 @@ public class MainActivity extends Activity{
                 });
             }
         });
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            Toast.makeText(this, "landscape", Toast.LENGTH_SHORT).show();
+            mCamera.setDisplayOrientation(0);
+        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
+            Toast.makeText(this, "portrait", Toast.LENGTH_SHORT).show();
+            mCamera.setDisplayOrientation(90);
+        }
     }
 
     private static Uri getOutputMediaFileUri(int type){
@@ -140,9 +160,7 @@ public class MainActivity extends Activity{
 
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
-            // 获取Jpeg图片，并保存在sd卡上
             File pictureFile = new File(fileUri.getPath());
-            File overlayFile = new File("");
             InputStream inputStream = getResources().openRawResource(+R.drawable.darth_vader);
             Bitmap rawBitmap = BitmapFactory.decodeByteArray(data,0,data.length);
             Bitmap overlayBitmap = BitmapFactory.decodeStream(inputStream);
