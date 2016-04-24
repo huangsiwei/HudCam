@@ -2,18 +2,20 @@ package com.example.hudcam;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
-import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -23,7 +25,9 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -32,32 +36,31 @@ import java.util.List;
  * Created by huangsiwei on 16/4/12.
  */
 public class MainActivity extends Activity{
+
+    public static Resources mResources;
+
     protected static final String TAG = "main";
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
     private Uri fileUri;
     private Camera mCamera;
+    private static Camera.Parameters mCameraParameters;
     private CameraPreview mPreview;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mResources = getResources();
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN , WindowManager.LayoutParams. FLAG_FULLSCREEN);
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
         setContentView(R.layout.activity_main);
         fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
-
         mCamera = getCameraInstance();
-
+        mCameraParameters = mCamera.getParameters();
+        setOptimalSizeOfCamera();
         // 创建预览类，并与Camera关联，最后添加到界面布局中
         mPreview = new CameraPreview(this, mCamera);
-
-        Camera.Parameters mCameraParameters = mCamera.getParameters();
-        mCameraParameters.getPictureSize();
-        List<Camera.Size> supportedPictureSizes = mCameraParameters.getSupportedPictureSizes();
-        mCameraParameters.setPictureSize(supportedPictureSizes.get(0).width,supportedPictureSizes.get(0).height);
-        mCamera.setParameters(mCameraParameters);
 
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
@@ -132,28 +135,82 @@ public class MainActivity extends Activity{
         return mediaFile;
     }
 
-    /** 检测设备是否存在Camera硬件 */
-    private boolean checkCameraHardware(Context context) {
-        if (context.getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_CAMERA)) {
-            // 存在
-            return true;
-        } else {
-            // 不存在
-            return false;
-        }
-    }
-
     /** 打开一个Camera */
     public static Camera getCameraInstance() {
         Camera c = null;
         try {
             c = Camera.open();
-            c.setDisplayOrientation(90);
+            Configuration config = mResources.getConfiguration();
+            if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                c.setDisplayOrientation(0);
+            } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT){
+                c.setDisplayOrientation(90);
+            }
+            List<Camera.Size> supportedPictureSizes = mCameraParameters.getSupportedPictureSizes();
+            mCameraParameters.setPictureSize(supportedPictureSizes.get(0).width,supportedPictureSizes.get(0).height);
+            c.setParameters(mCameraParameters);
         } catch (Exception e) {
             Log.d(TAG, "打开Camera失败失败");
         }
         return c;
+    }
+
+    private void setOptimalSizeOfCamera() {
+        List<Camera.Size> supportedPreviewSizes = mCameraParameters.getSupportedPreviewSizes();
+        DisplayMetrics displaymetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        int height = displaymetrics.heightPixels;
+        int width = displaymetrics.widthPixels;
+        mCameraParameters.setPreviewSize(getOptimalSize(supportedPreviewSizes,height,width).width,getOptimalSize(supportedPreviewSizes,height,width).height);
+        mCamera.setParameters(mCameraParameters);
+    }
+
+    private Camera.Size getOptimalSize(List<Camera.Size> sizes, int w, int h) {
+
+        final double ASPECT_TOLERANCE = 0.2;
+        double targetRatio = (double) w / h;
+        if (sizes == null)
+            return null;
+        Camera.Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+        int targetHeight = h;
+        // Try to find an size match aspect ratio and size
+        for (Camera.Size size : sizes)
+        {
+//          Log.d("CameraActivity", "Checking size " + size.width + "w " + size.height + "h");
+            double ratio = (double) size.width / size.height;
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
+                continue;
+            if (Math.abs(size.height - targetHeight) < minDiff)
+            {
+                optimalSize = size;
+                minDiff = Math.abs(size.height - targetHeight);
+            }
+        }
+        // Cannot find the one match the aspect ratio, ignore the requirement
+
+        if (optimalSize == null)
+        {
+            minDiff = Double.MAX_VALUE;
+            for (Camera.Size size : sizes) {
+                if (Math.abs(size.height - targetHeight) < minDiff)
+                {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.height - targetHeight);
+                }
+            }
+        }
+
+        SharedPreferences previewSizePref = getSharedPreferences("PREVIEW_PREF",MODE_PRIVATE);
+
+        SharedPreferences.Editor prefEditor = previewSizePref.edit();
+        prefEditor.putInt("width", optimalSize.width);
+        prefEditor.putInt("height", optimalSize.height);
+
+        prefEditor.commit();
+
+//      Log.d("CameraActivity", "Using size: " + optimalSize.width + "w " + optimalSize.height + "h");
+        return optimalSize;
     }
 
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
